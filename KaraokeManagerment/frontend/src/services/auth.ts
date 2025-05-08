@@ -1,17 +1,18 @@
 import api from './api';
-import axios from 'axios';
 import { AuthResponse, LoginCredentials, RegisterCredentials, User } from '../types/auth';
 
 export const authApi = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
       const response = await api.post<AuthResponse>('/auth/login', credentials);
-      const { token, customer } = response.data.data;
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(customer));
+      if (response.data.success && response.data.data) {
+        const { token, customer } = response.data.data;
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(customer));
+      }
       return response.data;
     } catch (error) {
-      console.error('Login failed');
+      console.error('Login failed:', error);
       throw error;
     }
   },
@@ -19,24 +20,27 @@ export const authApi = {
   register: async (credentials: RegisterCredentials): Promise<AuthResponse> => {
     try {
       const response = await api.post<AuthResponse>('/auth/register', credentials);
-      if (response.data.success) {
+      if (response.data.success && response.data.data) {
         const { token, customer } = response.data.data;
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(customer));
       }
       return response.data;
     } catch (error) {
-      console.error('Registration failed');
+      console.error('Registration failed:', error);
       throw error;
     }
   },
 
   getProfile: async (): Promise<User> => {
     try {
-      const response = await api.get<{ success: boolean; data: User }>('/profile');
-      return response.data.data;
+      const response = await api.get<{ success: boolean; data: User }>('/auth/profile');
+      if (response.data.success) {
+        return response.data.data;
+      }
+      throw new Error('Failed to get profile data');
     } catch (error) {
-      console.error('Failed to get profile');
+      console.error('Failed to get profile:', error);
       throw error;
     }
   },
@@ -44,7 +48,6 @@ export const authApi = {
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    window.location.href = '/login';
   },
 
   isAuthenticated: (): boolean => {

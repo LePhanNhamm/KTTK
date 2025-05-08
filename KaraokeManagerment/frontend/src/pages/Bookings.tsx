@@ -12,47 +12,90 @@ import {
   TableHead,
   TableRow,
   MenuItem,
+  Box,
+  Chip,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
+import { Delete, Edit, CheckCircle, Cancel } from '@mui/icons-material';
 
-const rooms = ['Phòng 101', 'Phòng 102', 'Phòng VIP 201', 'Phòng VIP 202'];
+interface Booking {
+  id: string;
+  roomName: string;
+  customerName: string;
+  startTime: string;
+  endTime: string;
+  status: 'Đã đặt' | 'Đang sử dụng' | 'Đã hủy' | 'Hoàn thành';
+  phoneNumber?: string;
+}
+
+const rooms = [
+  { id: '101', name: 'Phòng 101', type: 'Thường', price: '200.000đ/giờ' },
+  { id: '102', name: 'Phòng 102', type: 'Thường', price: '200.000đ/giờ' },
+  { id: '201', name: 'Phòng VIP 201', type: 'VIP', price: '400.000đ/giờ' },
+  { id: '202', name: 'Phòng VIP 202', type: 'VIP', price: '400.000đ/giờ' }
+];
 
 const Bookings = () => {
-  const [bookings] = useState([
+  const [bookings, setBookings] = useState<Booking[]>([
     {
       id: '1',
       roomName: 'Phòng 101',
       customerName: 'Nguyễn Văn A',
-      startTime: '19:00 08/05/2025',
-      endTime: '21:00 08/05/2025',
+      phoneNumber: '0123456789',
+      startTime: '2025-05-08T19:00',
+      endTime: '2025-05-08T21:00',
       status: 'Đã đặt'
     },
-    {
-      id: '2',
-      roomName: 'Phòng VIP 201', 
-      customerName: 'Trần Thị B',
-      startTime: '20:00 08/05/2025',
-      endTime: '22:00 08/05/2025',
-      status: 'Đang sử dụng'
-    }
   ]);
 
   const [newBooking, setNewBooking] = useState({
     roomName: '',
     customerName: '',
+    phoneNumber: '',
     startTime: '',
     endTime: ''
   });
 
-  const handleChange = (e : any) => {
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewBooking({
       ...newBooking,
       [e.target.name]: e.target.value
     });
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const booking: Booking = {
+      id: Date.now().toString(),
+      ...newBooking,
+      status: 'Đã đặt'
+    };
+    setBookings([...bookings, booking]);
+    setNewBooking({
+      roomName: '',
+      customerName: '',
+      phoneNumber: '',
+      startTime: '',
+      endTime: ''
+    });
+  };
+
+  const handleStatusChange = (bookingId: string, newStatus: Booking['status']) => {
+    setBookings(bookings.map(booking => 
+      booking.id === bookingId ? { ...booking, status: newStatus } : booking
+    ));
+  };
+
   return (
-    <Container sx={{ py: 3 }}>
-      <Typography variant="h5" gutterBottom>
+    <Container maxWidth="lg" sx={{ py: 3 }}>
+      <Typography variant="h4" gutterBottom>
         Quản lý đặt phòng
       </Typography>
 
@@ -61,50 +104,66 @@ const Bookings = () => {
           Đặt phòng mới
         </Typography>
         
-        <TextField
-          select
-          label="Chọn phòng"
-          name="roomName"
-          value={newBooking.roomName}
-          onChange={handleChange}
-          sx={{ mr: 2, mb: 2, minWidth: 200 }}
-        >
-          {rooms.map(room => (
-            <MenuItem key={room} value={room}>{room}</MenuItem>
-          ))}
-        </TextField>
+        <form onSubmit={handleSubmit}>
+          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+            <TextField
+              select
+              required
+              label="Chọn phòng"
+              name="roomName"
+              value={newBooking.roomName}
+              onChange={handleChange}
+            >
+              {rooms.map(room => (
+                <MenuItem key={room.id} value={room.name}>
+                  {room.name} - {room.price}
+                </MenuItem>
+              ))}
+            </TextField>
 
-        <TextField
-          label="Tên khách hàng"
-          name="customerName"
-          value={newBooking.customerName}
-          onChange={handleChange}
-          sx={{ mr: 2, mb: 2 }}
-        />
+            <TextField
+              required
+              label="Tên khách hàng"
+              name="customerName"
+              value={newBooking.customerName}
+              onChange={handleChange}
+            />
 
-        <TextField
-          label="Thời gian bắt đầu"
-          name="startTime"
-          type="datetime-local"
-          value={newBooking.startTime}
-          onChange={handleChange}
-          sx={{ mr: 2, mb: 2 }}
-          InputLabelProps={{ shrink: true }}
-        />
+            <TextField
+              required
+              label="Số điện thoại"
+              name="phoneNumber"
+              value={newBooking.phoneNumber}
+              onChange={handleChange}
+            />
 
-        <TextField
-          label="Thời gian kết thúc"
-          name="endTime" 
-          type="datetime-local"
-          value={newBooking.endTime}
-          onChange={handleChange}
-          sx={{ mr: 2, mb: 2 }}
-          InputLabelProps={{ shrink: true }}
-        />
+            <TextField
+              required
+              label="Thời gian bắt đầu"
+              name="startTime"
+              type="datetime-local"
+              value={newBooking.startTime}
+              onChange={handleChange}
+              InputLabelProps={{ shrink: true }}
+            />
 
-        <Button variant="contained">
-          Đặt phòng
-        </Button>
+            <TextField
+              required
+              label="Thời gian kết thúc"
+              name="endTime"
+              type="datetime-local"
+              value={newBooking.endTime}
+              onChange={handleChange}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Box>
+
+          <Box sx={{ mt: 2 }}>
+            <Button type="submit" variant="contained" color="primary">
+              Đặt phòng
+            </Button>
+          </Box>
+        </form>
       </Paper>
 
       <TableContainer component={Paper}>
@@ -113,10 +172,11 @@ const Bookings = () => {
             <TableRow>
               <TableCell>Phòng</TableCell>
               <TableCell>Khách hàng</TableCell>
+              <TableCell>Số điện thoại</TableCell>
               <TableCell>Bắt đầu</TableCell>
               <TableCell>Kết thúc</TableCell>
               <TableCell>Trạng thái</TableCell>
-              <TableCell>Thao tác</TableCell>
+              <TableCell align="center">Thao tác</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -124,22 +184,60 @@ const Bookings = () => {
               <TableRow key={booking.id}>
                 <TableCell>{booking.roomName}</TableCell>
                 <TableCell>{booking.customerName}</TableCell>
-                <TableCell>{booking.startTime}</TableCell>
-                <TableCell>{booking.endTime}</TableCell>
-                <TableCell>{booking.status}</TableCell>
+                <TableCell>{booking.phoneNumber}</TableCell>
+                <TableCell>{new Date(booking.startTime).toLocaleString()}</TableCell>
+                <TableCell>{new Date(booking.endTime).toLocaleString()}</TableCell>
                 <TableCell>
-                  <Button size="small" sx={{ mr: 1 }}>
-                    Check-in
-                  </Button>
-                  <Button size="small" color="error">
-                    Hủy
-                  </Button>
+                  <Chip
+                    label={booking.status}
+                    color={
+                      booking.status === 'Đã đặt' ? 'primary' :
+                      booking.status === 'Đang sử dụng' ? 'success' :
+                      booking.status === 'Đã hủy' ? 'error' : 
+                      'default'
+                    }
+                  />
+                </TableCell>
+                <TableCell align="center">
+                  <IconButton
+                    color="primary"
+                    onClick={() => handleStatusChange(booking.id, 'Đang sử dụng')}
+                    disabled={booking.status !== 'Đã đặt'}
+                  >
+                    <CheckCircle />
+                  </IconButton>
+                  <IconButton
+                    color="success"
+                    onClick={() => setSelectedBooking(booking)}
+                  >
+                    <Edit />
+                  </IconButton>
+                  <IconButton
+                    color="error"
+                    onClick={() => handleStatusChange(booking.id, 'Đã hủy')}
+                    disabled={booking.status === 'Hoàn thành' || booking.status === 'Đã hủy'}
+                  >
+                    <Cancel />
+                  </IconButton>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
+
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+        <DialogTitle>Chi tiết đặt phòng</DialogTitle>
+        <DialogContent>
+          {/* Add booking detail form here */}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDialog(false)}>Hủy</Button>
+          <Button variant="contained" onClick={() => setOpenDialog(false)}>
+            Lưu thay đổi
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

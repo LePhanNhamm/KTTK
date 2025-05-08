@@ -2,14 +2,14 @@ import axios from 'axios';
 import type { AxiosError } from 'axios/index';
 import { Room } from '../types/room';
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'http://localhost:3000/api'; // Make sure this matches your backend port
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json'
   },
-  timeout: 10000 // Increased timeout
+  timeout: 5000 // Add timeout
 });
 
 const getAuthToken = () => localStorage.getItem('token');
@@ -38,8 +38,8 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     console.error('API Error:', error);
-    if (error.code === 'ERR_NETWORK') {
-      throw new Error('Không thể kết nối đến máy chủ. Vui lòng thử lại sau.');
+    if (!error.response) {
+      throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối và thử lại.');
     }
     if (error.response?.status === 401) {
       // Handle unauthorized access

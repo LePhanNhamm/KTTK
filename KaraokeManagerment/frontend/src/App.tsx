@@ -33,13 +33,10 @@ const App = () => {
                 <Routes>
                   {/* Dashboard - Trang chủ */}
                   <Route path="/" element={<Dashboard />} />
-                  
-                  {/* Bookings - Quản lý đặt phòng */}
                   <Route path="/bookings" element={<Bookings />} />
                   <Route path="/bookings/new" element={<Bookings />} />
                   <Route path="/bookings/:id" element={<Bookings />} />
                   
-                  {/* Rooms - Quản lý phòng */}
                   <Route path="/rooms" element={<Rooms />} />
                   <Route path="/rooms/new" element={<Rooms />} />
                   <Route path="/rooms/:id" element={<Rooms />} />

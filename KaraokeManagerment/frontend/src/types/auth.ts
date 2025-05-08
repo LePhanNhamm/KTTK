@@ -8,7 +8,7 @@ export interface RegisterCredentials {
   password: string;
   email: string;
   name: string;
-  phone: string;
+  phone_number: string;
 }
 
 export interface User {
@@ -16,15 +16,16 @@ export interface User {
   username: string;
   name: string;
   email: string;
-  phone_number: string;
-  role: 'admin' | 'user';
+  phone_number?: string;
+}
+
+export interface AuthData {
+  token: string;
+  customer: User;
 }
 
 export interface AuthResponse {
   success: boolean;
-  data: {
-    message: string;
-    token: string;
-    customer: User;
-  };
+  data: AuthData;
+  message?: string;
 }

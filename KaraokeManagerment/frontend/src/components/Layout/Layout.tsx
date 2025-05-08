@@ -1,14 +1,29 @@
 import React from 'react';
-import { Box } from '@mui/material';
+import { Box, useTheme } from '@mui/material';
 import Header from './Header';
 import Sidebar from './Sidebar';
 
-const Layout = ({ children }: any) => {
+interface LayoutProps {
+  children: React.ReactNode;
+}
+
+const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const theme = useTheme();
+
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <Header />
       <Sidebar />
-      <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 8 }}>
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          p: 3,
+          mt: '64px',
+          backgroundColor: theme.palette.background.default,
+          overflow: 'auto'
+        }}
+      >
         {children}
       </Box>
     </Box>

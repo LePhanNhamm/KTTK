@@ -20,7 +20,7 @@ const Register = () => {
     password: '',
     email: '',
     name: '',
-    phone: ''
+    phone_number: '' // Changed from phone to phone_number
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,24 +33,52 @@ const Register = () => {
     });
   };
 
+  const validateForm = () => {
+    // Required fields validation
+    if (!formData.username.trim()) {
+      setError('Tên đăng nhập không được để trống');
+      return false;
+    }
+    if (!formData.password.trim() || formData.password.length < 6) {
+      setError('Mật khẩu phải có ít nhất 6 ký tự');
+      return false;
+    }
+    if (!formData.email.trim() || !formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      setError('Email không hợp lệ');
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.username || !formData.password || !formData.email) {
-      setError('Vui lòng điền đầy đủ thông tin');
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
     setError('');
 
     try {
-      const response = await authApi.register(formData);
+      const sanitizedData = {
+        username: formData.username.trim(),
+        password: formData.password.trim(),
+        email: formData.email.trim(),
+        name: formData.name.trim(),
+        phone_number: formData.phone_number.trim()
+      };
+
+      const response = await authApi.register(sanitizedData);
+      
       if (response.success) {
         setSuccess(true);
-        setTimeout(() => navigate('/login'), 2000);
+        // Remove token and user storage since they should log in first
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setTimeout(() => navigate('/login'), 2000); // Increased timeout to 2s for better UX
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+      const errorMessage = err.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.';
+      setError(errorMessage);
+      console.error('Registration error:', err);
     } finally {
       setLoading(false);
     }
@@ -79,6 +107,7 @@ const Register = () => {
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
+              required
               label="Tên đăng nhập"
               name="username"
               margin="normal"
@@ -88,6 +117,7 @@ const Register = () => {
 
             <TextField
               fullWidth
+              required
               label="Mật khẩu"
               name="password"
               type="password"
@@ -98,6 +128,7 @@ const Register = () => {
 
             <TextField
               fullWidth
+              required
               label="Email"
               name="email"
               type="email"
@@ -108,6 +139,7 @@ const Register = () => {
 
             <TextField
               fullWidth
+              required
               label="Họ tên"
               name="name"
               margin="normal"
@@ -117,10 +149,11 @@ const Register = () => {
 
             <TextField
               fullWidth
+              required
               label="Số điện thoại"
-              name="phone"
+              name="phone_number" // Changed from phone to phone_number
               margin="normal"
-              value={formData.phone}
+              value={formData.phone_number}
               onChange={handleChange}
             />
 

@@ -9,13 +9,16 @@ import {
   useMediaQuery,
   IconButton,
   Menu,
-  MenuItem
+  MenuItem,
+  Avatar
 } from '@mui/material';
 import { 
   Menu as MenuIcon,
   MeetingRoom,
   CalendarToday,
-  ExitToApp
+  ExitToApp,
+  Dashboard,
+  Person
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -24,6 +27,12 @@ const Header = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+
+  const menuItems = [
+    { text: 'Trang chủ', icon: <Dashboard />, path: '/' },
+    { text: 'Đặt phòng', icon: <CalendarToday />, path: '/bookings' },
+    { text: 'Quản lý phòng', icon: <MeetingRoom />, path: '/rooms' }
+  ];
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -34,89 +43,97 @@ const Header = () => {
   };
 
   const handleLogout = () => {
-    // Add your logout logic here
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     navigate('/login');
     handleClose();
   };
 
   return (
-    <AppBar position="sticky" elevation={1} sx={{ 
-      backgroundColor: 'background.paper',
-      color: 'text.primary',
-      borderBottom: '1px solid',
-      borderColor: 'divider'
-    }}>
-      <Toolbar sx={{ justifyContent: 'space-between' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography 
-            variant="h6" 
+    <AppBar 
+      position="fixed" 
+      sx={{ 
+        zIndex: theme.zIndex.drawer + 1,
+        backgroundColor: theme.palette.background.paper,
+        color: theme.palette.text.primary,
+        boxShadow: 1
+      }}
+    >
+      <Toolbar>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            flexGrow: 1,
+            fontWeight: 700,
+            letterSpacing: 1,
+            cursor: 'pointer',
+            color: theme.palette.primary.main,
+            '&:hover': {
+              opacity: 0.8
+            }
+          }}
+          onClick={() => navigate('/')}
+        >
+          KARAOKE HAPPY
+        </Typography>
+
+        {!isMobile && (
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {menuItems.map((item) => (
+              <Button
+                key={item.text}
+                startIcon={item.icon}
+                onClick={() => navigate(item.path)}
+                sx={{
+                  color: theme.palette.text.primary,
+                  '&:hover': {
+                    backgroundColor: theme.palette.action.hover
+                  }
+                }}
+              >
+                {item.text}
+              </Button>
+            ))}
+          </Box>
+        )}
+
+        <Box sx={{ ml: 2, display: 'flex', alignItems: 'center' }}>
+          <Avatar 
             sx={{ 
-              mr: 3,
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              color: 'primary.main'
+              width: 32, 
+              height: 32,
+              bgcolor: theme.palette.primary.main,
+              cursor: 'pointer'
             }}
-            onClick={() => navigate('/')}
+            onClick={handleMenu}
           >
-            KARAOKE HAPPY
-          </Typography>
-
-          {!isMobile && (
-            <>
-              <Button 
-                startIcon={<CalendarToday />}
-                onClick={() => navigate('/bookings')}
-                sx={{ mr: 1 }}
+            <Person />
+          </Avatar>
+          
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleClose}
+            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+          >
+            {isMobile && menuItems.map((item) => (
+              <MenuItem 
+                key={item.text}
+                onClick={() => {
+                  navigate(item.path);
+                  handleClose();
+                }}
               >
-                Đặt phòng
-              </Button>
-              <Button 
-                startIcon={<MeetingRoom />}
-                onClick={() => navigate('/rooms')}
-              >
-                Quản lý phòng
-              </Button>
-            </>
-          )}
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          {isMobile ? (
-            <>
-              <IconButton
-                size="large"
-                edge="end"
-                color="inherit"
-                onClick={handleMenu}
-              >
-                <MenuIcon />
-              </IconButton>
-              <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl)}
-                onClose={handleClose}
-              >
-                <MenuItem onClick={() => { navigate('/bookings'); handleClose(); }}>
-                  <CalendarToday sx={{ mr: 1 }} /> Đặt phòng
-                </MenuItem>
-                <MenuItem onClick={() => { navigate('/rooms'); handleClose(); }}>
-                  <MeetingRoom sx={{ mr: 1 }} /> Quản lý phòng
-                </MenuItem>
-                <MenuItem onClick={handleLogout}>
-                  <ExitToApp sx={{ mr: 1 }} /> Đăng xuất
-                </MenuItem>
-              </Menu>
-            </>
-          ) : (
-            <Button 
-              color="inherit"
-              endIcon={<ExitToApp />}
-              onClick={handleLogout}
-            >
+                {React.cloneElement(item.icon, { sx: { mr: 1 } })}
+                {item.text}
+              </MenuItem>
+            ))}
+            <MenuItem onClick={handleLogout}>
+              <ExitToApp sx={{ mr: 1 }} />
               Đăng xuất
-            </Button>
-          )}
+            </MenuItem>
+          </Menu>
         </Box>
       </Toolbar>
     </AppBar>
