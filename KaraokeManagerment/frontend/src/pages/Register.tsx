@@ -6,13 +6,16 @@ import {
   Button,
   Typography,
   Link,
-  Box
+  Box,
+  Alert
 } from '@mui/material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { authApi } from '../services/auth';
+import { RegisterCredentials } from '../types/auth';
 
 const Register = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<RegisterCredentials>({
     username: '',
     password: '',
     email: '',
@@ -20,24 +23,37 @@ const Register = () => {
     phone: ''
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-  const handleChange = (e : any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
   };
 
-  const handleSubmit = (e : any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simple validation
     if (!formData.username || !formData.password || !formData.email) {
       setError('Vui lòng điền đầy đủ thông tin');
       return;
     }
-    // Simulate API call
-    console.log('Form submitted:', formData);
-    navigate('/login');
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await authApi.register(formData);
+      if (response.success) {
+        setSuccess(true);
+        setTimeout(() => navigate('/login'), 2000);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -47,6 +63,18 @@ const Register = () => {
           <Typography variant="h5" align="center" gutterBottom>
             Đăng ký tài khoản
           </Typography>
+
+          {success && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              Đăng ký thành công! Đang chuyển hướng đến trang đăng nhập...
+            </Alert>
+          )}
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
 
           <form onSubmit={handleSubmit}>
             <TextField
@@ -96,19 +124,14 @@ const Register = () => {
               onChange={handleChange}
             />
 
-            {error && (
-              <Typography color="error" align="center" sx={{ mt: 2 }}>
-                {error}
-              </Typography>
-            )}
-
             <Button
               type="submit"
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
+              disabled={loading}
             >
-              Đăng ký
+              {loading ? 'Đang xử lý...' : 'Đăng ký'}
             </Button>
 
             <Typography align="center">

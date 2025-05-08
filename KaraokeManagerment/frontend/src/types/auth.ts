@@ -8,7 +8,7 @@ export interface RegisterCredentials {
   password: string;
   email: string;
   name: string;
-  phone_number: string;
+  phone: string;
 }
 
 export interface User {

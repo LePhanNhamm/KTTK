@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Paper,
@@ -8,143 +8,151 @@ import {
   Box,
   InputAdornment,
   Link,
-  Divider
+  Alert
 } from '@mui/material';
-import { AccountCircle, Lock, PersonAdd } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { AccountCircle, Lock } from '@mui/icons-material';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { authApi } from '../services/auth';
+import { LoginCredentials } from '../types/auth';
 
 const Login = () => {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState<LoginCredentials>({
+    username: '',
+    password: ''
+  });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (username === 'admin' && password === 'admin') {
-      localStorage.setItem('token', 'dummy-token');
+  useEffect(() => {
+    // Redirect if already authenticated
+    if (authApi.isAuthenticated()) {
       navigate('/');
-    } else {
-      setError('Sai tên đăng nhập hoặc mật khẩu');
+    }
+  }, [navigate]);
+
+  // Thêm useEffect để xử lý thông báo lỗi
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    if (error) {
+      timeoutId = setTimeout(() => {
+        setError('');
+      }, 5000); // Hiển thị thông báo lỗi trong 5 giây
+    }
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [error]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    
+    try {
+      await authApi.login(formData);
+      setSuccess(true);
+      setTimeout(() => navigate('/'), 1000);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Container maxWidth="xs" sx={{ 
-      height: '100vh', 
-      display: 'flex', 
-      alignItems: 'center',
-      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
-    }}>
-      <Box sx={{ width: '100%' }}>
-        <Paper sx={{ 
-          p: 4, 
-          borderRadius: 3,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-        }}>
-          <Typography 
-            variant="h5" 
-            align="center" 
-            gutterBottom 
-            sx={{ 
-              fontWeight: 'bold',
-              color: '#1976d2',
-              mb: 3
-            }}
-          >
-            ĐĂNG NHẬP HỆ THỐNG
+    <Container maxWidth="xs">
+      <Box sx={{ mt: 8 }}>
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h5" align="center" gutterBottom>
+            Đăng nhập
           </Typography>
+
+          {success && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              Đăng nhập thành công! Đang chuyển hướng...
+            </Alert>
+          )}
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
 
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
+              label="Tên đăng nhập"
+              name="username"
               margin="normal"
-              placeholder="Nhập tên đăng nhập"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
+              value={formData.username}
+              onChange={handleChange}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <AccountCircle color="primary" />
+                    <AccountCircle />
                   </InputAdornment>
                 ),
-                sx: { borderRadius: 2 }
               }}
-              sx={{ mb: 2 }}
+              required
             />
 
             <TextField
               fullWidth
-              margin="normal"
+              label="Mật khẩu"
+              name="password"
               type="password"
-              placeholder="Nhập mật khẩu"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
+              margin="normal"
+              value={formData.password}
+              onChange={handleChange}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Lock color="primary" />
+                    <Lock />
                   </InputAdornment>
                 ),
-                sx: { borderRadius: 2 }
               }}
-              sx={{ mb: 1 }}
+              required
             />
 
-            {error && (
-              <Typography color="error" align="center" sx={{ mt: 1, mb: 1 }}>
-                {error}
-              </Typography>
-            )}
+            <Box sx={{ mt: 2, mb: 2, textAlign: 'right' }}>
+              <Link
+                component="button"
+                variant="body2"
+                onClick={() => navigate('/quen-mat-khau')}
+              >
+                Quên mật khẩu?
+              </Link>
+            </Box>
 
             <Button
               type="submit"
               fullWidth
               variant="contained"
-              size="large"
-              sx={{ 
-                mt: 2, 
-                py: 1.5,
-                borderRadius: 2,
-                fontWeight: 'bold',
-                fontSize: '1rem'
-              }}
+              sx={{ mt: 3, mb: 2 }}
+              disabled={loading}
             >
-              ĐĂNG NHẬP
+              {loading ? 'Đang xử lý...' : 'Đăng nhập'}
             </Button>
 
-            <Divider sx={{ my: 3 }}>
-              <Typography variant="body2" color="textSecondary">
-                hoặc
-              </Typography>
-            </Divider>
-
-            <Button
-              fullWidth
-              variant="outlined"
-              size="large"
-              startIcon={<PersonAdd />}
-              sx={{
-                py: 1.5,
-                borderRadius: 2,
-                fontWeight: 'bold',
-                fontSize: '1rem'
-              }}
-              onClick={() => navigate('/register')}
-            >
-              TẠO TÀI KHOẢN MỚI
-            </Button>
-
-            <Box sx={{ textAlign: 'center', mt: 2 }}>
-              <Link 
-                href="#" 
-                variant="body2"
-                onClick={() => navigate('/forgot-password')}
-                sx={{ color: 'text.secondary' }}
-              >
-                Quên mật khẩu?
+            <Typography align="center">
+              Chưa có tài khoản?{' '}
+              <Link component={RouterLink} to="/register">
+                Đăng ký
               </Link>
-            </Box>
+            </Typography>
           </form>
         </Paper>
       </Box>
