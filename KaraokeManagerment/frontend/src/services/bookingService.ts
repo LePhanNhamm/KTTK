@@ -1,6 +1,6 @@
 import api from './api';
 import { ApiResponse } from '../types/api';
-import { Room, Booking } from '../types/booking';
+import { Room, Booking, BookingInput } from '../types/booking';
 
 export const bookingService = {
   findAvailableRooms: async (startTime: string, endTime: string): Promise<ApiResponse<Room[]>> => {
@@ -37,27 +37,16 @@ export const bookingService = {
     }
   },
 
-  createBooking: async (bookingData: Partial<Booking>): Promise<ApiResponse<Booking>> => {
+  createBooking: async (bookingData: BookingInput): Promise<ApiResponse<Booking>> => {
     try {
-      // Helper function to format date
-      const formatDate = (date: Date | string | undefined): string | undefined => {
-        if (!date) return undefined;
-        return typeof date === 'string' 
-          ? new Date(date).toISOString()
-          : (date as Date).toISOString();
-      };
-
       const formattedData = {
         ...bookingData,
-        start_time: formatDate(bookingData.start_time),
-        end_time: formatDate(bookingData.end_time)
+        total_amount: bookingData.total_amount || 0,
+        notes: bookingData.notes || '',
+        status: bookingData.status || 'pending'
       };
 
-      const response = await api.post<ApiResponse<Booking>>('/bookings', formattedData, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.post<ApiResponse<Booking>>('/bookings', formattedData);
       return response.data;
     } catch (error: any) {
       console.error('Error creating booking:', error);
@@ -73,5 +62,15 @@ export const bookingService = {
       console.error('Error getting all bookings:', error);
       throw error;
     }
-  }
+  },
+
+  updateBooking: async (id: number, data: Partial<BookingInput>): Promise<ApiResponse<Booking>> => {
+    try {
+      const response = await api.put<ApiResponse<Booking>>(`/bookings/${id}`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating booking:', error);
+      throw error;
+    }
+  },
 };

@@ -12,29 +12,52 @@ class BookingService {
         this.db = database.getPool();
     }
 
+    private formatDateForMySQL(date: string | Date): string {
+        const d = new Date(date);
+        return d.toISOString().slice(0, 19).replace('T', ' ');
+    }
+
     async createBooking(bookingData: Partial<Booking>): Promise<Booking> {
         try {
+            console.log('Creating booking with data:', bookingData);
+
+            const formattedStartTime = this.formatDateForMySQL(bookingData.start_time!);
+            const formattedEndTime = this.formatDateForMySQL(bookingData.end_time!);
+
+            console.log('Formatted dates:', {
+                start: formattedStartTime,
+                end: formattedEndTime
+            });
+
             const [result] = await this.db.execute<ResultSetHeader>(
-                'INSERT INTO bookings (room_id, customer_id, start_time, end_time, status) VALUES (?, ?, ?, ?, ?)',
+                `INSERT INTO bookings 
+                (room_id, customer_id, start_time, end_time, status, total_amount, notes) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)`,
                 [
                     bookingData.room_id,
                     bookingData.customer_id,
-                    bookingData.start_time,
-                    bookingData.end_time,
-                    bookingData.status
+                    formattedStartTime,
+                    formattedEndTime,
+                    bookingData.status || 'pending',
+                    bookingData.total_amount || 0,
+                    bookingData.notes || ''
                 ]
             );
-            
-            const booking = await this.getBookingById(result.insertId);
-            if (!booking) {
-                throw new Error('Failed to retrieve created booking');
+
+            if (result.affectedRows === 0) {
+                throw new Error('Failed to create booking');
             }
-            return booking;
+
+            // Fetch and return the created booking
+            const [rows] = await this.db.execute<BookingRow[]>(
+                'SELECT * FROM bookings WHERE id = ?',
+                [result.insertId]
+            );
+
+            return rows[0];
         } catch (error) {
-            if (error instanceof Error) {
-                throw new Error(`Failed to create booking: ${error.message}`);
-            }
-            throw new Error('Failed to create booking: Unknown error');
+            console.error('Error in createBooking:', error);
+            throw error;
         }
     }
 
@@ -94,13 +117,42 @@ class BookingService {
 
     async getAllBookings(): Promise<Booking[]> {
         try {
-            const [rows] = await this.db.execute<BookingRow[]>('SELECT * FROM bookings');
-            return rows;
+            const [rows] = await this.db.execute<BookingRow[]>(`
+                SELECT 
+                    b.*,
+                    r.name as room_name,
+                    r.type as room_type,
+                    r.price_per_hour,
+                    c.name as customer_name,
+                    c.email as customer_email,
+                    c.phone_number as customer_phone
+                FROM bookings b
+                LEFT JOIN rooms r ON b.room_id = r.id
+                LEFT JOIN customers c ON b.customer_id = c.id
+                ORDER BY b.start_time DESC
+            `);
+
+            return rows.map(row => ({
+                id: row.id,
+                room_id: row.room_id,
+                customer_id: row.customer_id,
+                start_time: row.start_time,
+                end_time: row.end_time,
+                status: row.status,
+                total_amount: row.total_amount,
+                notes: row.notes,
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+                room_name: row.room_name,
+                room_type: row.room_type,
+                price_per_hour: row.price_per_hour,
+                customer_name: row.customer_name,
+                customer_email: row.customer_email,
+                customer_phone: row.customer_phone
+            }));
         } catch (error) {
-            if (error instanceof Error) {
-                throw new Error(`Failed to get all bookings: ${error.message}`);
-            }
-            throw new Error('Failed to get all bookings: Unknown error');
+            console.error('Error in getAllBookings:', error);
+            throw new Error(`Failed to get all bookings: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 

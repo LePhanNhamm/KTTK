@@ -8,7 +8,7 @@ export interface RegisterCredentials {
   password: string;
   email: string;
   name: string;
-  phone_number: string;
+  phone_number: string; // Changed from phone to match backend
 }
 
 export interface User {
@@ -16,7 +16,8 @@ export interface User {
   username: string;
   name: string;
   email: string;
-  phone_number?: string;
+  phone_number: string;
+  role: 'admin' | 'user';
 }
 
 export interface AuthResponse {
@@ -28,10 +29,8 @@ export interface AuthResponse {
       username: string;
       name: string;
       email: string;
-      phone_number?: string;
-      role: string;
-      // omit password and other sensitive fields
     };
   };
   message?: string;
+  error?: string;
 }

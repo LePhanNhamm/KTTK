@@ -4,7 +4,7 @@ import { AuthResponse, LoginCredentials, RegisterCredentials, User } from '../ty
 export const authApi = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
-      const response = await api.post<AuthResponse>('/api/auth/login', credentials);
+      const response = await api.post<AuthResponse>('/customers/auth/login', credentials);
       
       if (response.data.success && response.data.data) {
         const { token, customer } = response.data.data;
@@ -25,11 +25,7 @@ export const authApi = {
   register: async (credentials: RegisterCredentials): Promise<AuthResponse> => {
     try {
       const response = await api.post<AuthResponse>('/customers/auth/register', credentials);
-      if (response.data.success && response.data.data) {
-        const { token, customer } = response.data.data;
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(customer));
-      }
+      // Remove auto-login behavior - just return the response
       return response.data;
     } catch (error) {
       console.error('Registration failed:', error);

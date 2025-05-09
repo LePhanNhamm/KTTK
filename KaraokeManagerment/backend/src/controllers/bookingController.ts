@@ -1,12 +1,15 @@
 import { Request, Response } from 'express';
 import BookingService from '../services/bookingService';
+import RoomService from '../services/roomService';
 import { Booking } from '../types';
 
 class BookingController {
     private bookingService: BookingService;
+    private roomService: RoomService;
 
     constructor() {
         this.bookingService = new BookingService();
+        this.roomService = new RoomService();
     }
 
     async findAvailableRooms(req: Request, res: Response) {
@@ -88,7 +91,7 @@ class BookingController {
         }
     }
 
-    async createBooking(req: Request, res: Response) {
+     async createBooking(req: Request, res: Response) {
         try {
             const { room_id, customer_id, start_time, end_time, notes } = req.body;
             
@@ -128,6 +131,7 @@ class BookingController {
             });
         }
     }
+
 
     async getAllBookings(req: Request, res: Response) {
         try {
@@ -218,29 +222,28 @@ class BookingController {
             if (isNaN(bookingId)) {
                 return res.status(400).json({
                     success: false,
-                    message: 'ID đặt phòng không hợp lệ'
+                    message: 'Invalid booking ID'
                 });
             }
 
-            const booking = await this.bookingService.getBookingById(bookingId);
-            if (!booking) {
+            const success = await this.bookingService.deleteBooking(bookingId);
+            
+            if (!success) {
                 return res.status(404).json({
                     success: false,
-                    message: 'Không tìm thấy đặt phòng'
+                    message: 'Booking not found'
                 });
             }
 
-            await this.bookingService.deleteBooking(bookingId);
-            return res.json({
+            res.json({
                 success: true,
-                message: 'Xóa đặt phòng thành công'
+                message: 'Booking deleted successfully'
             });
         } catch (error) {
             console.error('Error deleting booking:', error);
-            return res.status(500).json({
+            res.status(500).json({
                 success: false,
-                message: 'Lỗi khi xóa đặt phòng',
-                error: error instanceof Error ? error.message : 'Unknown error'
+                message: 'Failed to delete booking'
             });
         }
     }

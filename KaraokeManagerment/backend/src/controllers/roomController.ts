@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import RoomService from '../services/roomService';
-import { Room } from '../services/roomService';
+import { Room } from '../types';
 
 class RoomController {
     private roomService: RoomService;
@@ -11,30 +11,45 @@ class RoomController {
 
     async createRoom(req: Request, res: Response) {
         try {
+            console.log('Received create room request:', req.body);
+
             const { name, type, price_per_hour, capacity, status } = req.body;
 
             if (!name || !price_per_hour || !capacity) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Missing required fields'
+                    message: 'Missing required fields: name, price_per_hour, and capacity are required'
                 });
             }
 
-            const room = await this.roomService.createRoom({
-                name,
-                type,
-                price_per_hour,
-                capacity,
+            const roomData: Partial<Room> = {
+                name: name.trim(),
+                type: type?.trim(),
+                price_per_hour: Number(price_per_hour),
+                capacity: Number(capacity),
                 status: status || 'available'
+            };
+
+            const room = await this.roomService.createRoom(roomData);
+
+            return res.status(201).json({
+                success: true,
+                data: room,
+                message: 'Room created successfully'
             });
 
-            res.status(201).json({
-                success: true,
-                data: room
-            });
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'An unknown error occurred';
-            res.status(500).json({
+            console.error('Controller error creating room:', error);
+            const message = error instanceof Error ? error.message : 'Unknown error occurred';
+            
+            if (message.includes('Missing required fields')) {
+                return res.status(400).json({
+                    success: false,
+                    message
+                });
+            }
+
+            return res.status(500).json({
                 success: false,
                 message: 'Error creating room',
                 error: message
@@ -112,19 +127,27 @@ class RoomController {
             if (!success) {
                 return res.status(404).json({
                     success: false,
-                    message: 'Room not found or could not be deleted'
+                    message: 'Phòng không tồn tại hoặc đã bị xóa'
                 });
             }
 
             res.json({
                 success: true,
-                message: 'Room deleted successfully'
+                message: 'Xóa phòng thành công'
             });
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'An unknown error occurred';
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            
+            if (message.includes('has existing bookings')) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Không thể xóa phòng vì có đơn đặt phòng liên quan'
+                });
+            }
+
             res.status(500).json({
                 success: false,
-                message: 'Error deleting room',
+                message: 'Lỗi khi xóa phòng',
                 error: message
             });
         }

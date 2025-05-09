@@ -52,52 +52,31 @@ api.interceptors.response.use(
 
 export const roomApi = {
   getAllRooms: async (): Promise<Room[]> => {
-    try {
-      const response = await api.get<Room[]>('/rooms');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching rooms:', error);
-      throw error;
-    }
+    // Lấy tất cả phòng
+    const response = await api.get<Room[]>('/rooms');
+    return response.data;
   },
 
   getRoom: async (id: number): Promise<Room> => {
-    try {
-      const response = await api.get<Room>(`/rooms/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching room ${id}:`, error);
-      throw error;
-    }
+    // Lấy thông tin phòng theo ID
+    const response = await api.get<Room>(`/rooms/${id}`);
+    return response.data;
   },
 
   createRoom: async (room: Omit<Room, 'id'>): Promise<Room> => {
-    try {
-      const response = await api.post<Room>('/rooms', room);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating room:', error);
-      throw error;
-    }
+    // Tạo phòng mới
+    const response = await api.post<Room>('/rooms', room);
+    return response.data;
   },
 
   updateRoom: async (id: number, room: Partial<Room>): Promise<Room> => {
-    try {
-      const response = await api.put<Room>(`/rooms/${id}`, room);
-      return response.data;
-    } catch (error) {
-      console.error(`Error updating room ${id}:`, error);
-      throw error;
-    }
+    // Cập nhật thông tin phòng
+    const response = await api.put<Room>(`/rooms/${id}`, room);
+    return response.data;
   },
 
   deleteRoom: async (id: number): Promise<void> => {
-    try {
-      await api.delete(`/rooms/${id}`);
-    } catch (error) {
-      console.error(`Error deleting room ${id}:`, error);
-      throw error;
-    }
+    // Xóa phòng
   },
 };
 

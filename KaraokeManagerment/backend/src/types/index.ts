@@ -1,3 +1,5 @@
+import { RowDataPacket } from 'mysql2';
+
 export interface Customer {
     id?: number;
     username: string;
@@ -10,16 +12,22 @@ export interface Customer {
     updated_at?: Date;
 }
 
+// Interface for database operations
+export type RoomType = 'VIP' | 'Standard' | 'Normal';
+export type RoomStatus = 'available' | 'maintenance' | 'occupied';
+
 export interface Room {
-    id?: number;
+    id: number;
     name: string;
-    type: string;
+    type: RoomType;
     price_per_hour: number;
     capacity: number;
-    status: 'available' | 'occupied' | 'maintenance';
+    status: RoomStatus;
     created_at?: Date;
     updated_at?: Date;
 }
+
+export interface RoomRow extends Room, RowDataPacket {}
 
 export interface Booking {
     id?: number;

@@ -1,10 +1,21 @@
-// src/types/index.ts
-
 export interface Room {
-    id: string;
+    id?: number;
     name: string;
+    type: string;
+    price_per_hour: number;
     capacity: number;
-    pricePerHour: number;
+    status: RoomStatus;
+    created_at?: Date;
+    updated_at?: Date;
+}
+
+export type RoomStatus = 'available' | 'occupied' | 'maintenance';
+
+export interface ApiResponse<T> {
+    success: boolean;
+    data: T;
+    message?: string;
+    error?: string;
 }
 
 export interface Booking {

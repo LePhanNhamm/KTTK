@@ -31,6 +31,9 @@ import { Room, Booking } from '../types/booking';
 import { bookingService } from '../services/bookingService';
 import { ApiResponse } from '../types/api';
 import { useAuth } from '../contexts/AuthContext';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
 
 const Bookings = () => {
   const theme = useTheme();
@@ -146,12 +149,6 @@ const Bookings = () => {
       return false;
     }
 
-    const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-    if (hours > 24) {
-      setError('Thời gian đặt phòng tối đa là 24 giờ');
-      return false;
-    }
-
     return true;
   };
 
@@ -161,28 +158,34 @@ const Bookings = () => {
       return;
     }
 
-    // Validate dates again before submitting
     if (!validateTime()) return;
 
     setLoading(true);
     try {
-      const bookingData: Partial<Booking> = {
+      const start = new Date(bookingTime.start_time);
+      const end = new Date(bookingTime.end_time);
+      const durationHours = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60));
+      
+      // Ensure total_amount is a number
+      const totalAmount = Number(durationHours * selectedRoom.price_per_hour);
+
+      const bookingData = {
         room_id: selectedRoom.id,
         customer_id: user.id,
-        start_time: new Date(bookingTime.start_time).toISOString(),
-        end_time: new Date(bookingTime.end_time).toISOString(),
-        status: 'pending',
-        notes: bookingNotes.trim() || undefined
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        status: 'pending' as const,
+        total_amount: totalAmount, // Ensure it's a number
+        notes: bookingNotes || "Không có ghi chú"
       };
+
+      console.log('Booking data before send:', bookingData); // Debug log
 
       const response = await bookingService.createBooking(bookingData);
       
       if (response.success) {
-        // Show success message
         alert('Đặt phòng thành công');
-        // Reset form
         handleReset();
-        // Reload bookings list
         await loadBookings();
       }
     } catch (err: any) {
@@ -199,6 +202,38 @@ const Bookings = () => {
     setBookingTime({ start_time: '', end_time: '' });
     setBookingNotes('');
     setError('');
+  };
+
+  const handleViewBooking = (id?: number) => {
+    if (!id) return;
+    // Add view booking details logic
+    console.log('View booking:', id);
+  };
+
+  const handleConfirmBooking = async (id?: number) => {
+    if (!id) return;
+    try {
+      const response = await bookingService.updateBooking(id, { status: 'confirmed' });
+      if (response.success) {
+        await loadBookings();
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Lỗi khi xác nhận đặt phòng');
+    }
+  };
+
+  const handleCancelBooking = async (id?: number) => {
+    if (!id) return;
+    if (!window.confirm('Bạn có chắc muốn hủy đặt phòng này?')) return;
+    
+    try {
+      const response = await bookingService.updateBooking(id, { status: 'cancelled' });
+      if (response.success) {
+        await loadBookings();
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Lỗi khi hủy đặt phòng');
+    }
   };
 
   const renderRoomCard = (room: Room) => (
@@ -242,39 +277,100 @@ const Bookings = () => {
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Phòng ID</TableCell>
-            <TableCell>Khách hàng ID</TableCell>
-            <TableCell>Bắt đầu</TableCell>
-            <TableCell>Kết thúc</TableCell>
+            <TableCell>ID</TableCell>
+            <TableCell>Phòng</TableCell>
+            <TableCell>Thời gian</TableCell>
             <TableCell>Trạng thái</TableCell>
+            <TableCell>Tổng tiền</TableCell>
             <TableCell>Ghi chú</TableCell>
-            <TableCell align="right">Tổng tiền</TableCell>
+            <TableCell>Thao tác</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {bookings.map((booking) => (
-            <TableRow key={booking.id}>
-              <TableCell>{booking.room_id}</TableCell>
-              <TableCell>{booking.customer_id}</TableCell>
-              <TableCell>{new Date(booking.start_time).toLocaleString()}</TableCell>
-              <TableCell>{new Date(booking.end_time).toLocaleString()}</TableCell>
-              <TableCell>
-                <Chip
-                  label={booking.status}
-                  color={
-                    booking.status === 'pending' ? 'warning' :
-                    booking.status === 'confirmed' ? 'primary' :
-                    booking.status === 'completed' ? 'success' :
-                    'error'
-                  }
-                />
-              </TableCell>
-              <TableCell>{booking.notes}</TableCell>
-              <TableCell align="right">
-                {booking.total_amount?.toLocaleString()}đ
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={7} align="center">
+                <CircularProgress sx={{ my: 2 }} />
               </TableCell>
             </TableRow>
-          ))}
+          ) : bookings.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={7} align="center">
+                <Alert severity="info">Chưa có đặt phòng nào</Alert>
+              </TableCell>
+            </TableRow>
+          ) : (
+            bookings.map((booking) => (
+              <TableRow key={booking.id}>
+                <TableCell>{booking.id}</TableCell>
+                <TableCell>{booking.room_id}</TableCell>
+                <TableCell>
+                  <Box>
+                    <Typography variant="subtitle2">
+                      {new Date(booking.start_time).toLocaleString()}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary">
+                      đến {new Date(booking.end_time).toLocaleString()}
+                    </Typography>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={
+                      booking.status === 'pending' ? 'Chờ xác nhận' :
+                      booking.status === 'confirmed' ? 'Đã xác nhận' :
+                      booking.status === 'completed' ? 'Hoàn thành' :
+                      'Đã hủy'
+                    }
+                    color={
+                      booking.status === 'pending' ? 'warning' :
+                      booking.status === 'confirmed' ? 'primary' :
+                      booking.status === 'completed' ? 'success' :
+                      'error'
+                    }
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  {Number(booking.total_amount) > 0 ? 
+                    `${Number(booking.total_amount).toLocaleString()}đ` : 
+                    '0đ'
+                  }
+                </TableCell>
+                <TableCell>
+                  <Typography noWrap sx={{ maxWidth: 200 }}>
+                    {booking.notes || 'Không có ghi chú'}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleViewBooking(booking.id)}
+                  >
+                    <VisibilityIcon fontSize="small" />
+                  </IconButton>
+                  {booking.status === 'pending' && (
+                    <>
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => handleConfirmBooking(booking.id)}
+                      >
+                        <CheckCircleIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleCancelBooking(booking.id)}
+                      >
+                        <CancelIcon fontSize="small" />
+                      </IconButton>
+                    </>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </TableContainer>
