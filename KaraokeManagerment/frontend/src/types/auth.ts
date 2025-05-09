@@ -19,13 +19,19 @@ export interface User {
   phone_number?: string;
 }
 
-export interface AuthData {
-  token: string;
-  customer: User;
-}
-
 export interface AuthResponse {
   success: boolean;
-  data: AuthData;
+  data?: {
+    token: string;
+    customer: {
+      id: number;
+      username: string;
+      name: string;
+      email: string;
+      phone_number?: string;
+      role: string;
+      // omit password and other sensitive fields
+    };
+  };
   message?: string;
 }

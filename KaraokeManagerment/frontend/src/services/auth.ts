@@ -4,22 +4,27 @@ import { AuthResponse, LoginCredentials, RegisterCredentials, User } from '../ty
 export const authApi = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
-      const response = await api.post<AuthResponse>('/auth/login', credentials);
+      const response = await api.post<AuthResponse>('/api/auth/login', credentials);
+      
       if (response.data.success && response.data.data) {
         const { token, customer } = response.data.data;
+        
+        // Store in localStorage
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(customer));
+        
+        return response.data;
       }
-      return response.data;
+      throw new Error('Login failed');
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('Login error:', error);
       throw error;
     }
   },
 
   register: async (credentials: RegisterCredentials): Promise<AuthResponse> => {
     try {
-      const response = await api.post<AuthResponse>('/auth/register', credentials);
+      const response = await api.post<AuthResponse>('/customers/auth/register', credentials);
       if (response.data.success && response.data.data) {
         const { token, customer } = response.data.data;
         localStorage.setItem('token', token);

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import BookingService from '../services/bookingService';
-import { Booking } from '../models/Booking';
+import { Booking } from '../types';
 
 class BookingController {
     private bookingService: BookingService;
@@ -9,61 +9,122 @@ class BookingController {
         this.bookingService = new BookingService();
     }
 
-    async createBooking(req: Request, res: Response) {
+    async findAvailableRooms(req: Request, res: Response) {
         try {
-            const { room_id, customer_id, start_time, end_time } = req.body;
-            
-            if (!room_id || !customer_id || !start_time || !end_time) {
+            const start_time = req.query.start_time || req.body.start_time;
+            const end_time = req.query.end_time || req.body.end_time;
+
+            // Add debug logging
+            console.log('Received dates:', { start_time, end_time });
+
+            if (!start_time || !end_time) {
                 return res.status(400).json({ 
-                    success: false, 
-                    message: 'Missing required fields' 
+                    success: false,
+                    message: 'Thời gian bắt đầu và kết thúc là bắt buộc' 
                 });
             }
 
-            const booking = await this.bookingService.createBooking({
-                room_id,
-                customer_id,
-                start_time: new Date(start_time),
-                end_time: new Date(end_time),
-                status: 'pending'
+            // Ensure proper date parsing
+            const startDate = new Date(start_time as string);
+            const endDate = new Date(end_time as string);
+            const now = new Date();
+
+            // Add debug logging for parsed dates
+            console.log('Parsed dates:', { 
+                startDate: startDate.toISOString(), 
+                endDate: endDate.toISOString() 
             });
 
-            res.status(201).json({
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Định dạng thời gian không hợp lệ',
+                    debug: { start_time, end_time }
+                });
+            }
+
+            if (startDate >= endDate) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Thời gian bắt đầu phải nhỏ hơn thời gian kết thúc',
+                    debug: { 
+                        startDate: startDate.toISOString(),
+                        endDate: endDate.toISOString()
+                    }
+                });
+            }
+
+            const availableRooms = await this.bookingService.findAvailableRooms(
+                startDate,
+                endDate
+            );
+
+            if (!Array.isArray(availableRooms)) {
+                throw new Error('Invalid response from booking service');
+            }
+
+            return res.json({
                 success: true,
-                data: booking
+                message: 'Tìm thấy phòng trống',
+                data: availableRooms,
+                meta: {
+                    start_time: startDate.toISOString(),
+                    end_time: endDate.toISOString(),
+                    total_rooms: availableRooms.length
+                }
             });
+
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'An unknown error occurred';
-            res.status(500).json({
+            console.error('Error finding available rooms:', error);
+            
+            // Improve error response
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            return res.status(500).json({
                 success: false,
-                message: 'Error creating booking',
-                error: message
+                message: 'Lỗi khi tìm phòng trống',
+                error: errorMessage,
+                debug: process.env.NODE_ENV === 'development' ? error : undefined
             });
         }
     }
 
-    async getBooking(req: Request, res: Response) {
+    async createBooking(req: Request, res: Response) {
         try {
-            const bookingId = parseInt(req.params.id);
-            const booking = await this.bookingService.getBookingById(bookingId);
-
-            if (!booking) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Booking not found'
+            const { room_id, customer_id, start_time, end_time, notes } = req.body;
+            
+            // Validate required fields
+            if (!room_id || !customer_id || !start_time || !end_time) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'Thiếu thông tin bắt buộc' 
                 });
             }
 
-            res.json({
+            // Parse and validate dates
+            const startDate = new Date(start_time);
+            const endDate = new Date(end_time);
+
+            const booking = await this.bookingService.createBooking({
+                room_id,
+                customer_id,
+                start_time: startDate,
+                end_time: endDate,
+                status: 'pending',
+                notes: notes || undefined
+            } as any);
+
+            return res.status(201).json({
                 success: true,
-                data: booking
+                data: booking,
+                message: 'Đặt phòng thành công'
             });
+
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'An unknown error occurred';
-            res.status(500).json({
+            console.error('Error creating booking:', error);
+            return res.status(500).json({
                 success: false,
-                message: 'Error retrieving booking',
-                error: message
+                message: 'Lỗi khi đặt phòng',
+                error: error instanceof Error ? error.message : 'Unknown error'
             });
         }
     }
@@ -71,16 +132,48 @@ class BookingController {
     async getAllBookings(req: Request, res: Response) {
         try {
             const bookings = await this.bookingService.getAllBookings();
-            res.json({
+            return res.json({
                 success: true,
                 data: bookings
             });
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'An unknown error occurred';
-            res.status(500).json({
+            console.error('Error getting bookings:', error);
+            return res.status(500).json({
                 success: false,
-                message: 'Error retrieving bookings',
-                error: message
+                message: 'Lỗi khi tải danh sách đặt phòng',
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
+    }
+
+    async getBooking(req: Request, res: Response) {
+        try {
+            const bookingId = parseInt(req.params.id);
+            if (isNaN(bookingId)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'ID đặt phòng không hợp lệ'
+                });
+            }
+
+            const booking = await this.bookingService.getBookingById(bookingId);
+            if (!booking) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Không tìm thấy đặt phòng'
+                });
+            }
+
+            return res.json({
+                success: true,
+                data: booking
+            });
+        } catch (error) {
+            console.error('Error getting booking:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Lỗi khi tải thông tin đặt phòng',
+                error: error instanceof Error ? error.message : 'Unknown error'
             });
         }
     }
@@ -88,27 +181,33 @@ class BookingController {
     async updateBooking(req: Request, res: Response) {
         try {
             const bookingId = parseInt(req.params.id);
-            const updateData = req.body;
-
-            const updatedBooking = await this.bookingService.updateBooking(bookingId, updateData);
-
-            if (!updatedBooking) {
-                return res.status(404).json({
+            if (isNaN(bookingId)) {
+                return res.status(400).json({
                     success: false,
-                    message: 'Booking not found'
+                    message: 'ID đặt phòng không hợp lệ'
                 });
             }
 
-            res.json({
+            const booking = await this.bookingService.getBookingById(bookingId);
+            if (!booking) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Không tìm thấy đặt phòng'
+                });
+            }
+
+            const updatedBooking = await this.bookingService.updateBooking(bookingId, req.body);
+            return res.json({
                 success: true,
-                data: updatedBooking
+                data: updatedBooking,
+                message: 'Cập nhật đặt phòng thành công'
             });
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'An unknown error occurred';
-            res.status(500).json({
+            console.error('Error updating booking:', error);
+            return res.status(500).json({
                 success: false,
-                message: 'Error updating booking',
-                error: message
+                message: 'Lỗi khi cập nhật đặt phòng',
+                error: error instanceof Error ? error.message : 'Unknown error'
             });
         }
     }
@@ -116,25 +215,32 @@ class BookingController {
     async deleteBooking(req: Request, res: Response) {
         try {
             const bookingId = parseInt(req.params.id);
-            const result = await this.bookingService.deleteBooking(bookingId);
-
-            if (!result) {
-                return res.status(404).json({
+            if (isNaN(bookingId)) {
+                return res.status(400).json({
                     success: false,
-                    message: 'Booking not found'
+                    message: 'ID đặt phòng không hợp lệ'
                 });
             }
 
-            res.json({
+            const booking = await this.bookingService.getBookingById(bookingId);
+            if (!booking) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Không tìm thấy đặt phòng'
+                });
+            }
+
+            await this.bookingService.deleteBooking(bookingId);
+            return res.json({
                 success: true,
-                message: 'Booking deleted successfully'
+                message: 'Xóa đặt phòng thành công'
             });
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'An unknown error occurred';
-            res.status(500).json({
+            console.error('Error deleting booking:', error);
+            return res.status(500).json({
                 success: false,
-                message: 'Error deleting booking',
-                error: message
+                message: 'Lỗi khi xóa đặt phòng',
+                error: error instanceof Error ? error.message : 'Unknown error'
             });
         }
     }

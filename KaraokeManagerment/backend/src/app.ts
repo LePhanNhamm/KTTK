@@ -30,9 +30,9 @@ async function initializeApp() {
         const roomRoutes = (await import('./routes/roomRoutes')).default;
 
         // Routes
-        app.use('/api', bookingRoutes);
-        app.use('/api', customerRoutes);
-        app.use('/api', roomRoutes);
+        app.use('/api/bookings', bookingRoutes);
+        app.use('/api/customers', customerRoutes);
+        app.use('/api/rooms', roomRoutes);
 
         // Error handling middleware
         app.use((err: Error, req: Request, res: Response, next: NextFunction) => {

@@ -13,7 +13,6 @@ class CustomerService {
     }
 
     async createCustomer(customerData: Partial<Customer>): Promise<Customer> {
-        // Validate required fields
         if (!this.validateCustomerData(customerData)) {
             throw new Error('Invalid customer data');
         }

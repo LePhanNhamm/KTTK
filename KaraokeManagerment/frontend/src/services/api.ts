@@ -2,7 +2,7 @@ import axios from 'axios';
 import type { AxiosError } from 'axios/index';
 import { Room } from '../types/room';
 
-const API_BASE_URL = 'http://localhost:3000/api'; // Make sure this matches your backend port
+const API_BASE_URL = 'http://localhost:3000/api'; // Update this to match your backend URL
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -37,16 +37,16 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    console.error('API Error:', error);
-    if (!error.response) {
-      throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối và thử lại.');
+    if (error.response) {
+      console.error('API Error Response:', error.response);
+      throw error;
+    } else if (error.request) {
+      console.error('API Request Error:', error.request);
+      throw new Error('Không thể kết nối đến máy chủ');
+    } else {
+      console.error('API Setup Error:', error.message);
+      throw error;
     }
-    if (error.response?.status === 401) {
-      // Handle unauthorized access
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
   }
 );
 
