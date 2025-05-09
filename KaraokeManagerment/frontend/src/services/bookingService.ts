@@ -47,6 +47,7 @@ export const bookingService = {
       };
 
       const response = await api.post<ApiResponse<Booking>>('/bookings', formattedData);
+      console.log('Booking created:', response.data);
       return response.data;
     } catch (error: any) {
       console.error('Error creating booking:', error);

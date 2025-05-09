@@ -1,5 +1,5 @@
 export interface Room {
-    id?: number;  // Optional for creation, required when returned from API
+    id?: number;  // Optional for creation, required when returned from API,
     name: string;
     type: string;
     price_per_hour: number;

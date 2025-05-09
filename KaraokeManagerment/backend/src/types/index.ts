@@ -13,7 +13,7 @@ export interface Customer {
 }
 
 // Interface for database operations
-export type RoomType = 'VIP' | 'Standard' | 'Normal';
+export type RoomType = 'VIP' | 'Standard' | 'Premium' | 'Suite';
 export type RoomStatus = 'available' | 'maintenance' | 'occupied';
 
 export interface Room {

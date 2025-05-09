@@ -23,25 +23,25 @@ class BookingService {
 
             const formattedStartTime = this.formatDateForMySQL(bookingData.start_time!);
             const formattedEndTime = this.formatDateForMySQL(bookingData.end_time!);
+            
+            // Đảm bảo status là một trong các giá trị hợp lệ
+            const status = bookingData.status === 'pending' || 
+                           bookingData.status === 'confirmed' || 
+                           bookingData.status === 'cancelled' || 
+                           bookingData.status === 'completed' 
+                           ? bookingData.status 
+                           : 'pending';
 
-            console.log('Formatted dates:', {
-                start: formattedStartTime,
-                end: formattedEndTime
-            });
+            console.log('Using status:', status);
 
+            // Sử dụng câu lệnh SQL với tên cột và giá trị cụ thể
             const [result] = await this.db.execute<ResultSetHeader>(
                 `INSERT INTO bookings 
-                (room_id, customer_id, start_time, end_time, status, total_amount, notes) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [
-                    bookingData.room_id,
-                    bookingData.customer_id,
-                    formattedStartTime,
-                    formattedEndTime,
-                    bookingData.status || 'pending',
-                    bookingData.total_amount || 0,
-                    bookingData.notes || ''
-                ]
+                (room_id, customer_id, start_time, end_time, notes, status, total_amount) 
+                VALUES (${bookingData.room_id}, ${bookingData.customer_id}, 
+                '${formattedStartTime}', '${formattedEndTime}', 
+                '${bookingData.notes || ''}', '${status}', 
+                ${bookingData.total_amount || 0})`,
             );
 
             if (result.affectedRows === 0) {
@@ -255,3 +255,6 @@ class BookingService {
 }
 
 export default BookingService;
+
+
+

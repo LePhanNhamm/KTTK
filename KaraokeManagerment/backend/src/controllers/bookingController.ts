@@ -93,7 +93,7 @@ class BookingController {
 
      async createBooking(req: Request, res: Response) {
         try {
-            const { room_id, customer_id, start_time, end_time, notes } = req.body;
+            const { room_id, customer_id, start_time, end_time, notes, status, total_amount } = req.body;
             
             // Validate required fields
             if (!room_id || !customer_id || !start_time || !end_time) {
@@ -107,14 +107,19 @@ class BookingController {
             const startDate = new Date(start_time);
             const endDate = new Date(end_time);
 
+            // Đảm bảo status chỉ nhận một trong các giá trị hợp lệ
+            const validStatus = ['pending', 'confirmed', 'cancelled', 'completed'];
+            const bookingStatus = validStatus.includes(status) ? status : 'pending';
+
             const booking = await this.bookingService.createBooking({
                 room_id,
                 customer_id,
                 start_time: startDate,
                 end_time: endDate,
-                status: 'pending',
-                notes: notes || undefined
-            } as any);
+                notes: notes || '',
+                status: bookingStatus,
+                total_amount: total_amount || 0
+            });
 
             return res.status(201).json({
                 success: true,

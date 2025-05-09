@@ -4,7 +4,7 @@ import { Room, RoomRow, RoomType, RoomStatus } from '../types';
 
 class RoomService {
     private db: Pool;
-    private validRoomTypes: RoomType[] = ['VIP', 'Standard', 'Normal'];
+    private validRoomTypes: RoomType[] = ['VIP', 'Standard', 'Premium', 'Suite'];
     private validStatuses: RoomStatus[] = ['available', 'maintenance', 'occupied'];
 
     constructor() {
@@ -15,9 +15,13 @@ class RoomService {
         if (!type) {
             return 'Standard'; // Default type
         }
+        
+        // Kiểm tra xem type có trong danh sách hợp lệ không
         if (!this.validRoomTypes.includes(type as RoomType)) {
-            throw new Error(`Invalid room type. Must be one of: ${this.validRoomTypes.join(', ')}`);
+            console.warn(`Invalid room type: ${type}. Using default 'Standard'`);
+            return 'Standard'; // Sử dụng giá trị mặc định thay vì ném lỗi
         }
+        
         return type as RoomType;
     }
 
@@ -33,9 +37,17 @@ class RoomService {
                 throw new Error('Invalid price_per_hour or capacity value');
             }
 
+            // Xử lý đặc biệt cho loại phòng 'Normal'
+            let roomType = roomData.type as string;
+            if (roomType === 'Normal') {
+                roomType = 'Standard'; // Chuyển đổi 'Normal' thành 'Standard'
+                console.log('Converting room type from Normal to Standard');
+            }
+
             // Validate room type
-            if (roomData.type && !this.validRoomTypes.includes(roomData.type as RoomType)) {
-                throw new Error(`Invalid room type. Must be one of: ${this.validRoomTypes.join(', ')}`);
+            if (roomType && !this.validRoomTypes.includes(roomType as RoomType)) {
+                console.warn(`Invalid room type: ${roomType}. Using default 'Standard'`);
+                roomType = 'Standard'; // Sử dụng giá trị mặc định
             }
 
             // Validate status
@@ -43,14 +55,17 @@ class RoomService {
                 throw new Error(`Invalid status. Must be one of: ${this.validStatuses.join(', ')}`);
             }
 
-            console.log('Creating room with data:', roomData);
+            console.log('Creating room with data:', {
+                ...roomData,
+                type: roomType
+            });
 
             const [result] = await this.db.execute<ResultSetHeader>(
                 `INSERT INTO rooms (name, type, price_per_hour, capacity, status) 
                  VALUES (?, ?, ?, ?, ?)`,
                 [
                     roomData.name.trim(),
-                    roomData.type || 'Standard', // Default type
+                    roomType || 'Standard', // Sử dụng giá trị đã được xác thực
                     Number(roomData.price_per_hour),
                     Number(roomData.capacity),
                     roomData.status || 'available'
@@ -247,3 +262,5 @@ class RoomService {
 }
 
 export default RoomService;
+
+
